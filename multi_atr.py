@@ -7,6 +7,8 @@ import datetime
 import matplotlib.pyplot as plt
 # from matplotlib.finance import candlestick_ohlc as plot_candle
 import time
+import pandas as pd
+
 
 class HILO:
 
@@ -111,30 +113,122 @@ class HILO:
         atr_down_3 = ema - atrs * multi_factor[2] / 2
         return(atr_up_1[0],atr_up_2[0],atr_up_3[0],atr_down_1[0],atr_down_2[0],atr_down_3[0])
 
+    def pivothilo(self, high, low, leftt, rightt):
+        hi = high
+        lo = low
+
+        len_t = len(hi.T[0])
+        pivothi = np.zeros(len_t)
+        pivotlo = np.zeros(len_t)
+
+        for i in range(0, len_t):
+            if i < leftt or i+rightt+1 > len_t:
+                continue
+            flagh = True
+            for li in range(1, leftt+1):
+                if flagh and hi[i] <= hi[i-li]:
+                    flagh = False
+                    break
+                elif not flagh:
+                    break
+                else:
+                    continue
+            for ri in range(1, rightt+1):
+                if flagh and hi[i] <= hi[i+ri]:
+                    flagh = False
+                    break
+                elif not flagh:
+                    break
+                else:
+                    continue
+            if flagh:
+                pivothi[i] = hi[i]
+            else:
+                pivothi[i] = pivothi[i-1]
+
+        for i in range(0, len_t):
+            if i < leftt or i+rightt+1 > len_t:
+                continue
+            flagl = True
+            for li in range(1, leftt+1):
+                if flagl and lo[i] >= lo[i-li]:
+                    flagl = False
+                    break
+                elif not flagl:
+                    break
+                else:
+                    continue
+            for ri in range(1, rightt+1):
+                if flagl and lo[i] >= lo[i+ri]:
+                    flagl = False
+                    break
+                elif not flagl:
+                    break
+                else:
+                    continue
+            if flagl:
+                pivotlo[i] = lo[i]
+            else:
+                pivotlo[i] = pivotlo[i-1]
+
+        return(pivothi,pivotlo)
+
+
+    def dc(self, high, low, timeperiod):
+        max_price = np.array([talib.MAX(high.T[0], timeperiod)])
+        min_price = np.array([talib.MIN(low.T[0], timeperiod)])
+        return(max_price, min_price)
+
+
+    def dc_filter(self, close, high, low, timeperiod):
+        (max_p , min_p) = self.dc(high, low, timeperiod)
+        filtered = []
+        datalen = len(max_p[0])
+        for i in range(20, datalen):
+            if close[i] > max_p[0][i-1] :
+                filtered.append(1)
+            elif close[i] < min_p[0][i-1] :
+                filtered.append(2)
+            else:
+                filtered.append(0)
+        return filtered
 
     def time2data(self, ts):
         print(ts[0].strftime('%Y-%m-%d %H:%M:%S'))
 
+    def simulation_pivot(self):
+        #TODO
+
+
+
     def simulation(self):
         (time_stamp, open_price, high_price, low_price, close_price) = self.get_price()
         (atr_up_1, atr_up_2, atr_up_3, atr_down_1, atr_down_2, atr_down_3) = self.multi_atr(high_price, low_price, close_price, 18)
-
+        #filtered = self.dc_filter(close_price, high_price, low_price, 40)
+        (dc_max , dc_min) = self.dc(high_price, low_price, 40)
         datalen = len(open_price)
-        for i in range(20, datalen):
+        enter_flag = 0
+        for i in range(40, datalen):
+            if enter_flag > 0:
+                enter_flag -= 1
+                print('Last %d times'%enter_flag)
             if self.position == 0:
-                if high_price[i] > atr_up_1[i] and low_price[i] > atr_down_1[i]:
+                if high_price[i] > atr_up_1[i] and low_price[i] > atr_down_1[i] and dc_min[0][i-1] < close_price[i] and enter_flag == 0 :
                     #TODO
                     #enter short
                     #self.in_s(close_price[i])
                     self.time2data(time_stamp[i])
                     self.in_s(atr_up_1[i])
-                elif low_price[i] < atr_down_1[i] and high_price[i] < atr_up_1[i]:
+                elif low_price[i] < atr_down_1[i] and high_price[i] < atr_up_1[i] and dc_max[0][i-1] > close_price[i] and enter_flag == 0 :
                     #TODO
                     #self.in_l(close_price[i])
                     self.time2data(time_stamp[i])
                     self.in_l(atr_down_1[i])
                     #enter long
                     #enter short and loss cut
+                elif dc_min[0][i-1] > close_price[i] or dc_max[0][i-1] < close_price[i]:
+                    print('Not enter for 5 times')
+                    enter_flag = 5
                 else:
                     continue
             elif self.position > 0:
@@ -149,7 +243,7 @@ class HILO:
                     #q l
                     #loss cut
                     #continue
-                elif high_price[i] > atr_up_1[i]:
+                elif high_price[i] > atr_up_1[i] and close_price[i] < dc_max[0][i-1] and enter_flag == 0 :
                     self.time2data(time_stamp[i])
                     self.qu_l(atr_up_1[i])
 
@@ -158,6 +252,11 @@ class HILO:
                     #self.in_s(close_price[i])
                     #cal_profit
                     #enter short
+                elif close_price[i] > dc_max[0][i-1]:
+                    print('Not enter for 5 times')
+                    self.time2data(time_stamp[i])
+                    self.qu_l(close_price[i])
+                    enter_flag = 5
                 else:
                     continue
             elif self.position < 0:
@@ -171,7 +270,7 @@ class HILO:
                     #i = i + 24
                     #loss cut
                     #continue
-                elif low_price[i] < atr_down_1[i]:
+                elif low_price[i] < atr_down_1[i] and close_price[i] > dc_min[0][i-1] and enter_flag == 0 :
                     self.time2data(time_stamp[i])
                     self.qu_s(atr_down_1[i])
 
@@ -180,6 +279,11 @@ class HILO:
                     #self.in_l(close_price[i])
                     #cal_profit
                     #enter long
+                elif close_price[i] < dc_min[0][i-1]:
+                    self.time2data(time_stamp[i])
+                    self.qu_s(close_price[i])
+                    print('Not enter for 5 times')
+                    enter_flag = 5
                 else:
                     continue
 
@@ -189,10 +293,14 @@ if __name__ == '__main__':
     # directly
 
     hilo = HILO()
-    hilo.simulation()
-    print(hilo.profit)
-    print(hilo.max_win_combo)
-    print(hilo.max_lose_combo)
+    (time_stamp, open_price, high_price, low_price, close_price) = hilo.get_price()
+    (pivothi, pivotlo) = hilo.pivothilo(high_price, low_price, 4,2)
+    print(pivotlo)
+
+    #hilo.simulation()
+    #print(hilo.profit)
+    #print(hilo.max_win_combo)
+    #print(hilo.max_lose_combo)
 
 
 
