@@ -23,12 +23,14 @@ class HILO:
     max_win_combo = 1
     max_lose_combo = 1
     last_unit_profit = 0
+    leverage = 3
+    balance_list = []
 
     def __init__(self):
         print("HILO initialized")
         self.btc_charts = historical_fx.charts()
 
-    def get_price(self, num=1600, periods='1H'):
+    def get_price(self, num=3600, periods='2H'):
         (time_stamp, open_price, high_price, low_price, close_price) = self.btc_charts.get_price_array_till_finaltime(
             final_unixtime_stamp=time.time(), num=num, periods=periods, converter=True)
         return(time_stamp, open_price, high_price, low_price, close_price)
@@ -47,10 +49,20 @@ class HILO:
         self.enter_p = price
         #self.position = - self.balance / price
         if self.lose_combo > 2:
-            self.position = 1 / self.lose_combo
+            self.position = -1 / self.lose_combo
         else:
             self.position = -1
         print('Short in %.0f'%(price))
+
+    def loss_cut_position(self, loscutline, losscutpoint = 0.02):
+        maxloss = abs(self.enter_p - loscutline)
+        position_temp = (self.balance * self.leverage * losscutpoint) / maxloss
+        if self.position < 0 :
+            self.position = -position_temp
+
+        elif self.position > 0:
+            self.position = position_temp
+        print('Position: %.4f' % (self.position))
 
     def qu_s(self,price):
         unit_profit = self.enter_p - price
@@ -61,6 +73,7 @@ class HILO:
         self.win_or_lose(unit_profit)
         print('Quit short in %.0f, profit: %.0f' % (price,unit_profit))
         print('Balance : %.0f\n' % hilo.balance)
+        self.balance_list.append(hilo.balance)
 
 
     def qu_l(self,price):
@@ -72,6 +85,7 @@ class HILO:
         self.win_or_lose(unit_profit)
         print('Quit long in %.0f, profit: %.0f' % (price, unit_profit))
         print('Balance : %.0f\n' % hilo.balance)
+        self.balance_list.append(hilo.balance)
 
     def win_or_lose(self, unit_profit):
         if unit_profit > 0:
@@ -171,6 +185,12 @@ class HILO:
             else:
                 pivotlo[i] = pivotlo[i-1]
 
+
+        for fi in range(0, rightt):
+            pivothi[-fi - 1] = pivothi[-rightt - 1]
+            pivotlo[-fi - 1] = pivotlo[-rightt - 1]
+
+
         return(pivothi,pivotlo)
 
 
@@ -197,8 +217,44 @@ class HILO:
         print(ts[0].strftime('%Y-%m-%d %H:%M:%S'))
 
     def simulation_pivot(self):
+        (time_stamp, open_price, high_price, low_price, close_price) = self.get_price()
+        (pivothi, pivotlo) = self.pivothilo(high_price, low_price, 4, 2)
         #TODO
+        datalen = len(open_price)
+        for i in range(40, datalen):
+            if self.position == 0:
+                if high_price[i] > pivothi[i]:
+                    self.time2data(time_stamp[i])
+                    self.in_l(pivothi[i])
+                    #self.loss_cut_position(pivotlo[i])
+                elif low_price[i] < pivotlo[i]:
+                    self.time2data(time_stamp[i])
+                    self.in_s(pivotlo[i])
+                    #self.loss_cut_position(pivothi[i])
+                else:
+                    continue
+            elif self.position > 0:
+                if low_price[i] < pivotlo[i]:
+                    self.time2data(time_stamp[i])
+                    self.qu_l(pivotlo[i])
 
+
+                    self.time2data(time_stamp[i])
+                    self.in_s(pivotlo[i])
+                    #self.loss_cut_position(pivothi[i])
+                else:
+                    continue
+            elif self.position < 0:
+                if high_price[i] > pivothi[i]:
+                    self.time2data(time_stamp[i])
+                    self.qu_s(pivothi[i])
+
+
+                    self.time2data(time_stamp[i])
+                    self.in_l(pivothi[i])
+                    #self.loss_cut_position(pivotlo[i])
+                else:
+                    continue
 
 
     def simulation(self):
@@ -287,6 +343,19 @@ class HILO:
                 else:
                     continue
 
+    def balance_sta(self):
+        maxi = self.balance_list[0]
+        max_lose_rate = 0
+        balance_len = len(self.balance_list)
+        for i in self.balance_list:
+            if i >= maxi:
+                maxi = i
+            elif i < maxi:
+                lose_rate = (maxi -i) / maxi
+                if lose_rate > max_lose_rate:
+                    max_lose_rate = lose_rate
+        print(max_lose_rate)
+
 
 
 if __name__ == '__main__':
@@ -294,10 +363,10 @@ if __name__ == '__main__':
 
     hilo = HILO()
     (time_stamp, open_price, high_price, low_price, close_price) = hilo.get_price()
-    (pivothi, pivotlo) = hilo.pivothilo(high_price, low_price, 4,2)
-    print(pivotlo)
 
-    #hilo.simulation()
+
+    hilo.simulation_pivot()
+    hilo.balance_sta()
     #print(hilo.profit)
     #print(hilo.max_win_combo)
     #print(hilo.max_lose_combo)
