@@ -8,8 +8,8 @@ import tradebf_basic
 
 
 class Alert_trading(tradebf_basic.Trade_basic):
-    secret = 'RMihWn21BWxgDbM8YZ-f2DGFrWJH4GV6Dslf7k5nyrA'
-    #secret = 'Pnx_if7poxuZgLAcxELtoGdJLW07CmYeIrXvezsvQSI'
+    secret = ''
+    #secret = ''
     url = 'wss://pushstream.tradingview.com/message-pipe-ws/private_' + secret
 
     amount_pivot = 0.1
