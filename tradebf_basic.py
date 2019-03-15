@@ -2,13 +2,11 @@ from tradingapis.bitflyer_api import pybitflyer
 import keysecret as ks
 import time
 import predict
-#import configIO
-#import sys
 import math
 import notify
 import data2csv
 import memcache
-
+import configparser
 
 
 
@@ -26,6 +24,7 @@ class Trade_basic():
         print("Initializing API")
         self.bitflyer_api = pybitflyer.API(api_key=str(ks.bitflyer_api), api_secret=str(ks.bitflyer_secret))
         self.shared = memcache.Client(['127.0.0.1:11211'], debug=0)
+        self.config = configparser.ConfigParser()
 
     def write_para2mem(self, name, val):
         self.shared.set(name, val)
@@ -58,16 +57,16 @@ class Trade_basic():
         amount = '%.2f'%(float(amountin))
         while try_t < 20:
             if type == 'BUY' or type == 'buy':
-                #order = self.bitflyer_api.sendchildorder(product_code=product, child_order_type='MARKET',
-                #    side='BUY', size= str(amount))
+                order = self.bitflyer_api.sendchildorder(product_code=product, child_order_type='MARKET',
+                    side='BUY', size= str(amount))
                 order = 'child_order_acceptance_id, buy'
                 data2csv.data2csv(
                     [time.strftime('%b:%d:%H:%M'), 'order', 'BUY_MARKET', 'amount', '%f' % float(amount)])
                 predict.print_and_write('Buy market ' +str(amount))
             elif type == "SELL" or type == "sell":
-                #order = self.bitflyer_api.sendchildorder(product_code=product, child_order_type='MARKET',
-                #                                         side='SELL', size=str(amount))
-                order = 'child_order_acceptance_id, sell'
+                order = self.bitflyer_api.sendchildorder(product_code=product, child_order_type='MARKET',
+                                                         side='SELL', size=str(amount))
+                #order = 'child_order_acceptance_id, sell'
                 data2csv.data2csv(
                     [time.strftime('%b:%d:%H:%M'), 'order', 'SELL_MARKET', 'amount', '%f' % float(amount)])
                 predict.print_and_write('Sell market ' +str(amount))
@@ -228,3 +227,22 @@ class Trade_basic():
         print('Try too many times, failed')
         return 0.0
 
+    def judge_position(self, suggest_position):
+        t = 0
+        while t < 100000:
+            checkins = self.get_checkin_price()
+            if abs(suggest_position - checkins[1]) < 0.01:
+                predict.print_and_write('Suggest is same as real')
+                return(checkins)
+            t += 1
+            predict.print_and_write(
+                'Position is unusual, suggest: %.3f, real: %.3f , check again' % (suggest_position, checkins[1]))
+            time.sleep(5)  # in 5s , we should obvious the position change.
+            if (t % 60) == 0 and t > 59 :
+                predict.print_and_write('Correct position')
+                if suggest_position - checkins[1] > 0:
+                    self.trade_market('buy', '%.2f'%(suggest_position - checkins[1]))
+                elif suggest_position - checkins[1] < 0:
+                    self.trade_market('sell', '%.2f'%(checkins[1] -suggest_position ))
+        predict.print_and_write('Something is wrong, trade but not succeed')
+        return(checkins)

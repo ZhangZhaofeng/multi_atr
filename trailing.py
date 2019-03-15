@@ -16,13 +16,14 @@ class Trailing(tradebf_basic.Trade_basic):
     enter_price = -100
     loss_cut_rate = 0.05
     take_profit = 0.1
-    trailing_start = 0.018
-    trailing_stop = 0.005
+    trailing_start = 0.02
+    trailing_stop = 0.015
 
     def __init__(self):
         tradebf_basic.Trade_basic.__init__(self)
         print('trailing init')
-        #self.set_vals()
+        self.read_ini()
+        self.set_vals()
 
 
     def set_vals(self):
@@ -38,6 +39,22 @@ class Trailing(tradebf_basic.Trade_basic):
         self.position_pivot = self.read_para2men('position_pivot')
         self.position_cdcrsi = self.read_para2men('position_cdcrsi')
         self.enter_price = self.read_para2men('enter_price')
+
+    def write_ini(self, config_file = './trade_basic.ini'):
+
+        self.config['position'] = {'amount_pivot': '%.2f'%self.amount_pivot, 'amount_rsi': '%.2f'%self.amount_rsi,
+                                   'position_pivot': '%.2f'%self.position_pivot, 'position_cdcrsi': '%.2f'%self.position_cdcrsi,
+                                   'enter_price': '%.0f'%self.enter_price}
+        with open(config_file, 'w') as configfile:
+            self.config.write(configfile)
+
+    def read_ini(self, config_file = './trade_basic.ini'):
+        self.config.read(config_file)
+        self.amount_pivot = float(self.config.get('position', 'amount_pivot'))
+        self.amount_rsi = float(self.config.get('position', 'amount_rsi'))
+        self.position_pivot = float(self.config.get('position', 'position_pivot'))
+        self.position_cdcrsi = float(self.config.get('position', 'position_cdcrsi'))
+        self.enter_price = float(self.config.get('position', 'enter_price'))
 
     def iters(self):
         while 1:
@@ -104,6 +121,7 @@ class Trailing(tradebf_basic.Trade_basic):
                     self.print_position()
                     predict.print_and_write(order)
                     self.set_vals()
+                    self.write_ini()
                     return ('Quit long')
                 elif self.position_cdcrsi < 0.0:
                     trade_amount = self.position_cdcrsi
@@ -113,6 +131,7 @@ class Trailing(tradebf_basic.Trade_basic):
                     self.print_position()
                     predict.print_and_write(order)
                     self.set_vals()
+                    self.write_ini()
                     return ('Quit short')
             self.get_vals()
             time.sleep(0.8)

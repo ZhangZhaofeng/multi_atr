@@ -2,14 +2,12 @@ import time
 import predict
 import json
 import websocket
-
 import tradebf_basic
 
 
 
 class Alert_trading(tradebf_basic.Trade_basic):
-    secret = ''
-    #secret = ''
+    secret = 'RMihWn21BWxgDbM8YZ-f2DGFrWJH4GV6Dslf7k5nyr'
     url = 'wss://pushstream.tradingview.com/message-pipe-ws/private_' + secret
 
     amount_pivot = 0.1
@@ -22,6 +20,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
     def __init__(self):
         tradebf_basic.Trade_basic.__init__(self)
         print('Alert sys loaded')
+        self.read_ini()
         self.set_vals()
 
 
@@ -35,6 +34,22 @@ class Alert_trading(tradebf_basic.Trade_basic):
 
     def print_position(self):
         predict.print_and_write('Total : %.2f, Pivot : %.2f, CDC : %.2f'%(float(self.position_pivot) + float(self.position_cdcrsi), float(self.position_pivot), float(self.position_cdcrsi)))
+
+    def write_ini(self, config_file = './trade_basic.ini'):
+
+        self.config['position'] = {'amount_pivot': '%.2f'%self.amount_pivot, 'amount_rsi': '%.2f'%self.amount_rsi,
+                                   'position_pivot': '%.2f'%self.position_pivot, 'position_cdcrsi': '%.2f'%self.position_cdcrsi,
+                                   'enter_price': '%.0f'%self.enter_price}
+        with open(config_file, 'w') as configfile:
+            self.config.write(configfile)
+
+    def read_ini(self, config_file = './trade_basic.ini'):
+        self.config.read(config_file)
+        self.amount_pivot = float(self.config.get('position', 'amount_pivot'))
+        self.amount_rsi = float(self.config.get('position', 'amount_rsi'))
+        self.position_pivot = float(self.config.get('position', 'position_pivot'))
+        self.position_cdcrsi = float(self.config.get('position', 'position_cdcrsi'))
+        self.enter_price = float(self.config.get('position', 'enter_price'))
 
 
     def set_vals(self):
@@ -61,6 +76,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
             self.print_position()
             predict.print_and_write(order)
             self.set_vals()
+            self.write_ini()
             return (True)
         elif str == 'pivot_long' and self.position_pivot <= 0.0:
             print("msg: %s is processed" % str)
@@ -70,6 +86,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
             self.print_position()
             predict.print_and_write(order)
             self.set_vals()
+            self.write_ini()
             return (True)
         elif str == 'rsi_long' and self.position_cdcrsi <= 0.0:
             print("msg: %s is processed" % str)
@@ -80,6 +97,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
             self.print_position()
             predict.print_and_write(order)
             self.set_vals()
+            self.write_ini()
             return (True)
         elif str == 'rsi_short' and self.position_cdcrsi >= 0.0:
             print("msg: %s is processed" % str)
@@ -90,6 +108,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
             self.print_position()
             predict.print_and_write(order)
             self.set_vals()
+            self.write_ini()
             return (True)
         elif str == 'rsi_quitlong' and self.position_cdcrsi > 0.0:
             print("msg: %s is processed" % str)
@@ -100,6 +119,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
             self.print_position()
             predict.print_and_write(order)
             self.set_vals()
+            self.write_ini()
             return (True)
         elif str == 'rsi_quitshort' and self.position_cdcrsi < 0.0:
             print("msg: %s is processed" % str)
@@ -110,6 +130,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
             self.print_position()
             predict.print_and_write(order)
             self.set_vals()
+            self.write_ini()
             return (True)
         else:
             print("msg: %s is ignored." % str)
@@ -120,6 +141,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
         while 1:
             try:
                 ws.run_forever()
+                time.sleep(1)
             except Exception:
                 print(Exception)
                 time.sleep(0.5)
@@ -127,7 +149,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
 
 if __name__ == '__main__':
     autoTrading = Alert_trading()
-    #autoTrading.process_msg('rsi_quitlong')
+    #autoTrading.process_msg('rsi_long')
     #time.sleep(20)
     #autoTrading.process_msg('rsi_quitshort')
     autoTrading.run()
