@@ -59,7 +59,7 @@ class Trade_basic():
             if type == 'BUY' or type == 'buy':
                 order = self.bitflyer_api.sendchildorder(product_code=product, child_order_type='MARKET',
                     side='BUY', size= str(amount))
-                order = 'child_order_acceptance_id, buy'
+                #order = 'child_order_acceptance_id, buy'
                 data2csv.data2csv(
                     [time.strftime('%b:%d:%H:%M'), 'order', 'BUY_MARKET', 'amount', '%f' % float(amount)])
                 predict.print_and_write('Buy market ' +str(amount))
