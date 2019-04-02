@@ -114,7 +114,7 @@ class Trailing(tradebf_basic.Trade_basic):
             #loss cut
             if profit < trail_take_profit or profit > trail_max_profit:
                 if self.position_cdcrsi > 0.0:
-                    trade_amount = self.position_cdcrsi
+                    trade_amount = abs(self.position_cdcrsi)
                     order = self.trade_market('sell', trade_amount)
                     self.position_cdcrsi = self.position_cdcrsi - trade_amount
                     self.enter_price = -100
@@ -124,7 +124,7 @@ class Trailing(tradebf_basic.Trade_basic):
                     self.write_ini()
                     return ('Quit long')
                 elif self.position_cdcrsi < 0.0:
-                    trade_amount = self.position_cdcrsi
+                    trade_amount = abs(self.position_cdcrsi)
                     order = self.trade_market('buy', trade_amount)
                     self.position_cdcrsi = self.position_cdcrsi + trade_amount
                     self.enter_price = -100
