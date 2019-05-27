@@ -1,12 +1,13 @@
 from tradingapis.bitflyer_api import pybitflyer
 import keysecret as ks
-import time
+import time,datetime
 import predict
 import math
 import notify
 import data2csv
 import memcache
 import configparser
+import technical_fx_hilo2
 
 
 
@@ -16,8 +17,8 @@ class Trade_basic():
     total_margin = 50000
     least_collateral = 15000
     useable_margin = 35000
-    level = 3
-    max_loss = 0.03
+    level = 1
+    max_loss = 0.02
 
 
     def __init__(self):
@@ -32,20 +33,45 @@ class Trade_basic():
     def read_para2men(self, name):
         return(self.shared.get(name))
 
-    def decide_trade_amount(self, curp ,losscut):
+    def get_ATR(self):
+        least_atr = 5000
+        i = 0
+        while i < 100:
+            try:
+                atrs = technical_fx_hilo2.HILO()
+                result = atrs.getATR()
+                    # result = prediction.publish_current_limit_price(periods="1H")
+                atr = round(float(result), 0)
+                if atr < least_atr:
+                    predict.print_and_write('ATR is smaller than least, %.0f -> %.0f' % (atr, least_atr))
+                    atr = least_atr
+                return (atr)
+            except Exception:
+                print(Exception)
+                predict.print_and_write('Try to get atr again')
+                time.sleep(10)
+                i += 1
+                continue
+
+    def decide_trade_amount(self):
+        # usually losscut = 2.2 ATR
         safe_trade = 0.1
+        losscut_factor = 2.2
         if self.auto_decide:
-            while curp == 0.0:
-                predict.print_and_write('curp == 0 try again')
-                curp = self.get_current_price(30)
-            max_trade = round(self.useable_margin * self.level / curp, 2)
-            safe_trade = round(self.useable_margin * self.max_loss / losscut, 2)
+            atrs = self.get_ATR()
+            losscut = atrs * losscut_factor
+            curp = self.get_current_price(30)
+            max_trade = math.floor(self.useable_margin * self.level*100 / curp)/100
+            safe_trade = math.floor(self.useable_margin * self.max_loss*100 / losscut)/100
+            if max_trade < 0.01:
+                max_trade = 0.01
+            if safe_trade < 0.01:
+                safe_trade = 0.01
             predict.print_and_write('Amount control, Max trade: %.2f, safe trade: %.2f' % (max_trade, safe_trade))
             if safe_trade > max_trade:
                 predict.print_and_write('Use smaller')
                 safe_trade = max_trade
-            self.init_trade_amount_buy = safe_trade
-            self.init_trade_amount_sell = safe_trade
+        return(safe_trade)
 
     def trade_market(self, type, amountin, wprice = 10000):
         self.maintance_time()
@@ -59,7 +85,7 @@ class Trade_basic():
             if type == 'BUY' or type == 'buy':
                 order = self.bitflyer_api.sendchildorder(product_code=product, child_order_type='MARKET',
                     side='BUY', size= str(amount))
-                #order = 'child_order_acceptance_id, buy'
+                order = 'child_order_acceptance_id, buy'
                 data2csv.data2csv(
                     [time.strftime('%b:%d:%H:%M'), 'order', 'BUY_MARKET', 'amount', '%f' % float(amount)])
                 predict.print_and_write('Buy market ' +str(amount))
@@ -215,7 +241,7 @@ class Trade_basic():
                 for i in trade_history:
                     cur_price += i['size']/total_size * i['price']
 
-                if cur_price == 0.0:
+                if cur_price < 20000:
                     time.sleep(0.1)
                     continue
                 return(math.floor(cur_price))
@@ -246,3 +272,30 @@ class Trade_basic():
                     self.trade_market('sell', '%.2f'%(checkins[1] -suggest_position ))
         predict.print_and_write('Something is wrong, trade but not succeed')
         return(checkins)
+
+    def get_ATR(self):
+        i = 0
+        while i < 100:
+            try:
+                atrs = technical_fx_hilo2.HILO()
+                result = atrs.getATR()
+                # result = prediction.publish_current_limit_price(periods="1H")
+                return (result)
+            except Exception:
+                print(Exception)
+                predict.print_and_write('Try to get atr again')
+                time.sleep(10)
+                i += 1
+                continue
+
+    def get_last_highlow(self):
+        lw = technical_fx_hilo2.HILO()
+        time_stamp, open_price, high_price, low_price, close_price = lw.get_price()
+        high_price = high_price[-1]
+        low_price = low_price[-1]
+        return(high_price, low_price)
+
+
+    def get_curhour(self):
+        cur_hour = datetime.datetime.fromtimestamp(time.time() - time.time() % 3600 +10)
+        return(cur_hour.timestamp())
