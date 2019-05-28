@@ -12,7 +12,8 @@ class Trailing(tradebf_basic.Trade_basic):
 
 
     enter_price = -100
-    loss_cut_rate = 0.02
+    loss_cut_rate = 0.022
+    loss_cut_rate_force = 0.035
     take_profit = 0.2
     trailing_start = 0.08
     trailing_stop = 0.07
@@ -64,7 +65,8 @@ class Trailing(tradebf_basic.Trade_basic):
             if self.position_pivot != 0.0:
                 cur_time = time.gmtime()
                 print('start a trailing order')
-                retstr = self.trailing_loss_cut(cur_time)
+                atr = self.get_ATR()
+                retstr = self.trailing_loss_cut(cur_time, atr)
                 print(retstr)
             time.sleep(0.8)
             #except Exception:
@@ -75,22 +77,29 @@ class Trailing(tradebf_basic.Trade_basic):
 
 
 
-    def trailing_loss_cut(self, starttime):
-        profit = 0
+    def trailing_loss_cut(self, starttime, atr):
+        #profit = 0
         max_profit = 0
         startt = self.bf_timejudge(starttime) # start time ( num)
         #tdelta = self.bf_timejudge(starttime)
-        trail_loss_cut = -self.loss_cut_rate * self.enter_price # init loss cut price usually 2.2 atr
+        #trail_loss_cut = -self.loss_cut_rate * self.enter_price # init loss cut price usually 2.2 atr
+        trail_loss_cut = -2.2 * atr
         trail_take_profit = trail_loss_cut
+
+        trail_take_profit_force = -4.4 * atr
+        #temp2 = -self.loss_cut_rate_force * self.enter_price
+
         trail_max_profit = self.take_profit * self.enter_price
-        temp_pre_profit = 0
+        #temp_pre_profit = 0
         flag = True
         init_position = self.position_pivot
         dt = 0
         update_flag = True # update trailing acc
-        trailing_factor = 0.15
+        trailing_factor = 0.2
         trailing_acc = 0.1  # add acc ever hour
         trailing_max = 1  # acc max to this
+        loss_cut_count = 0
+        loss_cut_count_start = False
 
         predict.print_and_write('Use a trial order')
         if self.enter_price == -100:
@@ -116,9 +125,14 @@ class Trailing(tradebf_basic.Trade_basic):
                     update_flag = False
                     print('Trailing factor updated %.2f' % (trailing_factor))
 
+                if loss_cut_count_start: # if start to count loss cut, quit
+                    loss_cut_count_start = False
+                    loss_cut_count = 0
+                    print('Loss cut statues released')
 
                 profit_gain = (profit - max_profit) * trailing_factor
                 trail_take_profit = math.floor(trail_take_profit + profit_gain)
+                trail_take_profit_force = math.floor(trail_take_profit_force + profit_gain)
                 max_profit = profit
 
                 if max_profit >= self.trailing_start * self.enter_price and flag:
@@ -128,7 +142,12 @@ class Trailing(tradebf_basic.Trade_basic):
                     flag = False
             tdelta = self.bf_timejudge(starttime)
             ds = tdelta - startt
-            print('H: %d, S: %d, P: %5.0f, MP: %5.0f, L: %5.0f' % (dt , ds, profit, max_profit, trail_take_profit), end='\r')
+            if loss_cut_count_start:
+                print('Wait to quit, LC: %3d,  P: %6.0f, MP: %6.0f, L: %6.0f' % (loss_cut_count, profit, max_profit, trail_take_profit),
+                      end='\r')
+            else:
+                print('H: %2d, S: %4d, P: %6.0f, MP: %6.0f, L: %6.0f' % (dt, ds, profit, max_profit, trail_take_profit),
+                      end='\r')
             if ds > 3600:
             # if hour changed reset time
                 startt = tdelta
@@ -137,10 +156,15 @@ class Trailing(tradebf_basic.Trade_basic):
                 update_flag = True
 
             #loss cut
-            if profit < trail_take_profit or profit > trail_max_profit:
-                if self.position_pivot > 0.0:
+            if profit < trail_take_profit or profit > trail_max_profit or loss_cut_count_start:
+                if loss_cut_count <= 300: # protect the price not break too soon
+                    loss_cut_count_start = True
+
+                if self.position_pivot > 0.0 and (loss_cut_count > 300 or profit < trail_take_profit_force):
+                    if profit < trail_take_profit_force:
+                        print('Last line toched quit immediately')
                     trade_amount = abs(self.position_pivot)
-                    order = self.trade_market('sell', trade_amount)
+                    order = self.trade_market('sell', trade_amount, cur_price)
                     self.position_pivot = self.position_pivot - trade_amount
                     self.enter_price = -100
                     self.print_position()
@@ -148,9 +172,11 @@ class Trailing(tradebf_basic.Trade_basic):
                     self.set_vals()
                     self.write_ini()
                     return ('Quit long')
-                elif self.position_pivot < 0.0:
+                elif self.position_pivot < 0.0 and (loss_cut_count > 300 or profit < trail_take_profit_force):
+                    if profit < trail_take_profit_force:
+                        print('Last line touched quit immediately')
                     trade_amount = abs(self.position_pivot)
-                    order = self.trade_market('buy', trade_amount)
+                    order = self.trade_market('buy', trade_amount, cur_price)
                     self.position_pivot = self.position_pivot + trade_amount
                     self.enter_price = -100
                     self.print_position()
@@ -159,7 +185,10 @@ class Trailing(tradebf_basic.Trade_basic):
                     self.write_ini()
                     return ('Quit short')
             self.get_vals()
+            if loss_cut_count_start:
+                loss_cut_count += 1
             time.sleep(0.8)
+
         return ('Quit pivot by other way')
 
 

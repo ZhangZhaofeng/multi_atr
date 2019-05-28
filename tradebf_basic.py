@@ -16,7 +16,7 @@ class Trade_basic():
     auto_decide = True
     total_margin = 50000
     least_collateral = 15000
-    useable_margin = 35000
+    useable_margin = 85000
     level = 1
     max_loss = 0.02
 
@@ -52,6 +52,7 @@ class Trade_basic():
                 time.sleep(10)
                 i += 1
                 continue
+
 
     def decide_trade_amount(self):
         # usually losscut = 2.2 ATR
@@ -273,20 +274,7 @@ class Trade_basic():
         predict.print_and_write('Something is wrong, trade but not succeed')
         return(checkins)
 
-    def get_ATR(self):
-        i = 0
-        while i < 100:
-            try:
-                atrs = technical_fx_hilo2.HILO()
-                result = atrs.getATR()
-                # result = prediction.publish_current_limit_price(periods="1H")
-                return (result)
-            except Exception:
-                print(Exception)
-                predict.print_and_write('Try to get atr again')
-                time.sleep(10)
-                i += 1
-                continue
+
 
     def get_last_highlow(self):
         lw = technical_fx_hilo2.HILO()

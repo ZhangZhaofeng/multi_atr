@@ -68,10 +68,11 @@ class Alert_trading(tradebf_basic.Trade_basic):
             print("msg: %s is processed" % str)
             self.amount_pivot = self.decide_trade_amount()
             trade_amount = self.amount_pivot + self.position_pivot
-            order = self.trade_market('sell', trade_amount)
+
             self.position_pivot = self.position_pivot - trade_amount
             self.enter_price = self.get_current_price(50)
             self.print_position()
+            order = self.trade_market('sell', trade_amount, self.enter_price)
             predict.print_and_write(order)
             self.set_vals()
             self.write_ini()
@@ -81,10 +82,11 @@ class Alert_trading(tradebf_basic.Trade_basic):
             print("msg: %s is processed" % str)
             self.amount_pivot = self.decide_trade_amount()
             trade_amount = self.amount_pivot - self.position_pivot
-            order = self.trade_market('buy', trade_amount)
+
             self.position_pivot = self.position_pivot + trade_amount
             self.enter_price = self.get_current_price(50)
             self.print_position()
+            order = self.trade_market('buy', trade_amount, self.enter_price)
             predict.print_and_write(order)
             self.set_vals()
             self.write_ini()
