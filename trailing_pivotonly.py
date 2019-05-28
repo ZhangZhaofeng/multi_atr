@@ -83,11 +83,13 @@ class Trailing(tradebf_basic.Trade_basic):
         startt = self.bf_timejudge(starttime) # start time ( num)
         #tdelta = self.bf_timejudge(starttime)
         #trail_loss_cut = -self.loss_cut_rate * self.enter_price # init loss cut price usually 2.2 atr
-        trail_loss_cut = -2.2 * atr
-        trail_take_profit = trail_loss_cut
+        #trail_loss_cut =
+        trail_take_profit = -2.2 * atr
 
         trail_take_profit_force = -4.4 * atr
-        #temp2 = -self.loss_cut_rate_force * self.enter_price
+        temp2 = -self.loss_cut_rate_force * self.enter_price
+        if temp2 < trail_take_profit_force:
+            trail_take_profit_force = temp2
 
         trail_max_profit = self.take_profit * self.enter_price
         #temp_pre_profit = 0
