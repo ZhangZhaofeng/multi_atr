@@ -16,7 +16,7 @@ class Trailing(tradebf_basic.Trade_basic):
     loss_cut_rate_force = 0.035
     take_profit = 0.2
     trailing_start = 0.1
-    trailing_stop = 0.07
+    trailing_stop = 0.08
 
     add_step = 0.6 # add position step: 0.6 atr
     max_step = 3
@@ -127,12 +127,12 @@ class Trailing(tradebf_basic.Trade_basic):
                     if trailing_factor > trailing_max:
                         trailing_factor = trailing_max
                     update_flag = False
-                    print('Trailing factor updated %.2f' % (trailing_factor))
+                    predict.print_and_write('Trailing factor updated %.2f' % (trailing_factor))
 
                 if loss_cut_count_start: # if start to count loss cut, quit
                     loss_cut_count_start = False
                     loss_cut_count = 0
-                    print('Loss cut statues released')
+                    predict.print_and_write('Loss cut statues released')
 
                 profit_gain = profit * trailing_factor # trailing values
                 trail_take_profit = math.floor(inital_lc_line + profit_gain)
@@ -154,16 +154,16 @@ class Trailing(tradebf_basic.Trade_basic):
             else:
                 print('H: %2d, S: %4d, P: %6.0f, MP: %6.0f, L: %6.0f' % (dt, ds, profit, max_profit, trail_take_profit),
                       end='\r')
-            if ds > 3600:
+            if ds > 1800:
             # if hour changed reset time
                 startt = tdelta
                 ds = 0
                 dt += 1
-                if update_flag == True and dt%2 == 0: # update trailing factor each 3 hour
+                if update_flag == True and dt%4 == 0: # update trailing factor each 2 hour
                     trailing_factor += trailing_acc
                     if trailing_factor > trailing_max:
                         trailing_factor = trailing_max
-                        print('Trailing factor updated %.2f' % (trailing_factor)) # if trail not updated in this hour
+                        predict.print_and_write('Trailing factor updated %.2f' % (trailing_factor)) # if max profit not updated in this hour forcely update the trailing factor
                     profit_gain = max_profit * trailing_factor
                     trail_take_profit = math.floor(inital_lc_line + profit_gain)
                     trail_take_profit_force = math.floor(inital_lc_line_force + profit_gain)
@@ -178,7 +178,7 @@ class Trailing(tradebf_basic.Trade_basic):
 
                 if self.position_pivot > 0.0 and (loss_cut_count > 300 or profit < trail_take_profit_force):
                     if profit < trail_take_profit_force:
-                        print('Last line toched quit immediately')
+                        predict.print_and_write('Last line toched quit immediately')
                     trade_amount = abs(self.position_pivot)
                     order = self.trade_market('sell', trade_amount, cur_price)
                     self.position_pivot = self.position_pivot - trade_amount
@@ -190,7 +190,7 @@ class Trailing(tradebf_basic.Trade_basic):
                     return ('Quit long')
                 elif self.position_pivot < 0.0 and (loss_cut_count > 300 or profit < trail_take_profit_force):
                     if profit < trail_take_profit_force:
-                        print('Last line touched quit immediately')
+                        predict.print_and_write('Last line touched quit immediately')
                     trade_amount = abs(self.position_pivot)
                     order = self.trade_market('buy', trade_amount, cur_price)
                     self.position_pivot = self.position_pivot + trade_amount
