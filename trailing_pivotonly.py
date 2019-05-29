@@ -15,7 +15,7 @@ class Trailing(tradebf_basic.Trade_basic):
     loss_cut_rate = 0.022
     loss_cut_rate_force = 0.035
     take_profit = 0.2
-    trailing_start = 0.08
+    trailing_start = 0.1
     trailing_stop = 0.07
 
     add_step = 0.6 # add position step: 0.6 atr
@@ -84,9 +84,11 @@ class Trailing(tradebf_basic.Trade_basic):
         #tdelta = self.bf_timejudge(starttime)
         #trail_loss_cut = -self.loss_cut_rate * self.enter_price # init loss cut price usually 2.2 atr
         #trail_loss_cut =
-        trail_take_profit = -2.2 * atr
 
+        trail_take_profit = -2.2 * atr
+        inital_lc_line = trail_take_profit
         trail_take_profit_force = -4.4 * atr
+        inital_lc_line_force = trail_take_profit_force
         temp2 = -self.loss_cut_rate_force * self.enter_price
         if temp2 < trail_take_profit_force:
             trail_take_profit_force = temp2
@@ -132,16 +134,18 @@ class Trailing(tradebf_basic.Trade_basic):
                     loss_cut_count = 0
                     print('Loss cut statues released')
 
-                profit_gain = (profit - max_profit) * trailing_factor
-                trail_take_profit = math.floor(trail_take_profit + profit_gain)
-                trail_take_profit_force = math.floor(trail_take_profit_force + profit_gain)
+                profit_gain = profit * trailing_factor # trailing values
+                trail_take_profit = math.floor(inital_lc_line + profit_gain)
+                trail_take_profit_force = math.floor(inital_lc_line_force + profit_gain)
                 max_profit = profit
 
-                if max_profit >= self.trailing_start * self.enter_price and flag:
-                    new_trail_take_profit = self.trailing_stop * self.enter_price
-                    if new_trail_take_profit > trail_take_profit:
-                        trail_take_profit = new_trail_take_profit
-                    flag = False
+                #if max_profit >= self.trailing_start * self.enter_price and flag:
+                #    new_trail_take_profit = self.trailing_stop * self.enter_price
+                #    if new_trail_take_profit > trail_take_profit:
+                #        print('init loss cut line updated to trailing stop point')
+                #        inital_lc_line = new_trail_take_profit - profit_gain
+                #        trail_take_profit = inital_lc_line + profit_gain
+                #    flag = False
             tdelta = self.bf_timejudge(starttime)
             ds = tdelta - startt
             if loss_cut_count_start:
@@ -155,7 +159,17 @@ class Trailing(tradebf_basic.Trade_basic):
                 startt = tdelta
                 ds = 0
                 dt += 1
-                update_flag = True
+                if update_flag == True and dt%2 == 0: # update trailing factor each 3 hour
+                    trailing_factor += trailing_acc
+                    if trailing_factor > trailing_max:
+                        trailing_factor = trailing_max
+                        print('Trailing factor updated %.2f' % (trailing_factor)) # if trail not updated in this hour
+                    profit_gain = max_profit * trailing_factor
+                    trail_take_profit = math.floor(inital_lc_line + profit_gain)
+                    trail_take_profit_force = math.floor(inital_lc_line_force + profit_gain)
+
+                else:
+                    update_flag = True
 
             #loss cut
             if profit < trail_take_profit or profit > trail_max_profit or loss_cut_count_start:
