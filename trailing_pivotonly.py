@@ -163,7 +163,7 @@ class Trailing(tradebf_basic.Trade_basic):
                     trailing_factor += trailing_acc
                     if trailing_factor > trailing_max:
                         trailing_factor = trailing_max
-                        predict.print_and_write('Trailing factor updated %.2f' % (trailing_factor)) # if max profit not updated in this hour forcely update the trailing factor
+                    predict.print_and_write('Trailing factor updated %.2f' % (trailing_factor)) # if max profit not updated in this hour forcely update the trailing factor
                     profit_gain = max_profit * trailing_factor
                     trail_take_profit = math.floor(inital_lc_line + profit_gain)
                     trail_take_profit_force = math.floor(inital_lc_line_force + profit_gain)
