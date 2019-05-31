@@ -78,6 +78,7 @@ class Trailing(tradebf_basic.Trade_basic):
 
 
     def trailing_loss_cut(self, starttime, atr):
+
         #profit = 0
         max_profit = 0
         startt = self.bf_timejudge(starttime) # start time ( num)
@@ -101,13 +102,16 @@ class Trailing(tradebf_basic.Trade_basic):
         update_flag = True # update trailing acc
         #trailing_factor = 0.2
         trailing_factor = self.init_trailing_factor
-        trailing_acc = 0.1  # add acc ever hour
+          # add acc ever hour
         if atr > 10000:
-            trailing_max = 1.0 + math.floor((atr - 10000)/1000) * 0.2  # acc max to this
+            trailing_max = 1.0 + math.floor((atr - 10000)/1000) * 0.18  # acc max to this
+            trailing_acc = 0.1 + math.floor((atr - 10000)/1000) * 0.02
         else:
             trailing_max = 1.0
+            trailing_acc = 0.1
         loss_cut_count = 0
         loss_cut_count_start = False
+        predict.print_and_write('ATR is %.0f, t_max is %.3f, t_acc is %.3f'%(atr,trailing_max,trailing_acc))
 
         predict.print_and_write('Use a trial order')
         if self.enter_price == -100:
