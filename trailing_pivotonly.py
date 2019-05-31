@@ -102,7 +102,10 @@ class Trailing(tradebf_basic.Trade_basic):
         #trailing_factor = 0.2
         trailing_factor = self.init_trailing_factor
         trailing_acc = 0.1  # add acc ever hour
-        trailing_max = 1  # acc max to this
+        if atr > 10000:
+            trailing_max = 1.0 + math.floor((atr - 10000)/1000) * 0.2  # acc max to this
+        else:
+            trailing_max = 1.0
         loss_cut_count = 0
         loss_cut_count_start = False
 
@@ -215,6 +218,6 @@ if __name__ == '__main__':
 
 
     autoTrading = Trailing()
-    if argc >= 2:
+    if argc >= 2: # we can add init trailing factor
         autoTrading.init_trailing_factor = float(sys.argv[1])
     autoTrading.iters()
