@@ -63,7 +63,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
     def process_msg(self, str):
         self.get_vals()
 
-        if str == 'pivot_short' and self.position_pivot >= 0.0:
+        if (str == 'pivot_short' or str == 'Repeat_short') and self.position_pivot >= 0.0:
         #if self.testFlag:
             print("msg: %s is processed" % str)
             self.amount_pivot = self.decide_trade_amount()
@@ -76,9 +76,8 @@ class Alert_trading(tradebf_basic.Trade_basic):
             predict.print_and_write(order)
             self.set_vals()
             self.write_ini()
-            self.testFlag = False
             return (True)
-        elif str == 'pivot_long' and self.position_pivot <= 0.0:
+        elif (str == 'pivot_long' or str == 'Repeat_long') and self.position_pivot <= 0.0:
             print("msg: %s is processed" % str)
             self.amount_pivot = self.decide_trade_amount()
             trade_amount = self.amount_pivot - self.position_pivot
