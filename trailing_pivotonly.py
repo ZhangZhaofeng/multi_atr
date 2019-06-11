@@ -10,6 +10,7 @@ class Trailing(tradebf_basic.Trade_basic):
     amount_pivot = 0.0
     position_pivot = 0.0
     init_trailing_factor = 0.2
+    init_trailing_atr = -0.1
 
     enter_price = -100
     loss_cut_rate = 0.022
@@ -102,16 +103,22 @@ class Trailing(tradebf_basic.Trade_basic):
         update_flag = True # update trailing acc
         #trailing_factor = 0.2
         trailing_factor = self.init_trailing_factor
+        trailing_atr = self.init_trailing_atr
           # add acc ever hour
         if atr > 10000:
-            trailing_max = 1.0 + math.floor((atr - 10000)/1000) * 0.18  # acc max to this
+            trailing_max = 1.0 + math.floor((atr - 10000)/1000) * 0.1  # acc max to this
             trailing_acc = 0.1 + math.floor((atr - 10000)/1000) * 0.02
+            trailing_atr_max = 0.7 + math.floor((atr - 10000)/1000) * 0.1
+            trailing_atr_acc = 0.1 + math.floor((atr - 10000)/1000) * 0.02
         else:
             trailing_max = 1.0
             trailing_acc = 0.1
+            trailing_atr_max = 0.7
+            trailing_atr_acc = 0.1
         loss_cut_count = 0
         loss_cut_count_start = False
-        predict.print_and_write('ATR is %.0f, t_max is %.3f, t_acc is %.3f'%(atr,trailing_max,trailing_acc))
+        predict.print_and_write('ATR is %.0f, t_max %.3f, t_acc %.3f, a_max %.3f, a_acc %.3f' % (
+        atr, trailing_max, trailing_acc, trailing_atr_max, trailing_atr_acc))
 
         predict.print_and_write('Use a trial order')
         if self.enter_price == -100:
@@ -132,10 +139,19 @@ class Trailing(tradebf_basic.Trade_basic):
                 # if max profit reached: update trailing factor ever hour
                 if update_flag:
                     trailing_factor += trailing_acc
+                    trailing_atr += trailing_atr_acc
                     if trailing_factor > trailing_max:
                         trailing_factor = trailing_max
+                    if trailing_atr > trailing_atr_max:
+                        trailing_atr = trailing_atr_max
                     update_flag = False
-                    predict.print_and_write('Trailing factor updated %.2f' % (trailing_factor))
+                    predict.print_and_write('Trailing factor updated profit: %.2f, atr: %.2f' % (trailing_factor, trailing_atr))
+
+
+                #if max_profit >= atr and flag:
+                #    print('profit > atr and update lc_line to new line')
+                #    inital_lc_line = inital_lc_line + atr
+                #    flag = False
 
                 if loss_cut_count_start: # if start to count loss cut, quit
                     loss_cut_count_start = False
@@ -143,17 +159,12 @@ class Trailing(tradebf_basic.Trade_basic):
                     predict.print_and_write('Loss cut statues released')
 
                 profit_gain = profit * trailing_factor # trailing values
-                trail_take_profit = math.floor(inital_lc_line + profit_gain)
-                trail_take_profit_force = math.floor(inital_lc_line_force + profit_gain)
+                atr_gain = atr * trailing_atr
+                trail_take_profit = math.floor(inital_lc_line + profit_gain + atr_gain)
+                trail_take_profit_force = math.floor(inital_lc_line_force + profit_gain + atr_gain)
                 max_profit = profit
 
-                #if max_profit >= self.trailing_start * self.enter_price and flag:
-                #    new_trail_take_profit = self.trailing_stop * self.enter_price
-                #    if new_trail_take_profit > trail_take_profit:
-                #        print('init loss cut line updated to trailing stop point')
-                #        inital_lc_line = new_trail_take_profit - profit_gain
-                #        trail_take_profit = inital_lc_line + profit_gain
-                #    flag = False
+
             tdelta = self.bf_timejudge(starttime)
             ds = tdelta - startt
             if loss_cut_count_start:
@@ -167,15 +178,24 @@ class Trailing(tradebf_basic.Trade_basic):
                 startt = tdelta
                 ds = 0
                 dt += 1
-                if update_flag == True and dt%4 == 0: # update trailing factor each 2 hour
-                    trailing_factor += trailing_acc
-                    if trailing_factor > trailing_max:
-                        trailing_factor = trailing_max
-                    predict.print_and_write('Trailing factor updated %.2f' % (trailing_factor)) # if max profit not updated in this hour forcely update the trailing factor
-                    profit_gain = max_profit * trailing_factor
-                    trail_take_profit = math.floor(inital_lc_line + profit_gain)
-                    trail_take_profit_force = math.floor(inital_lc_line_force + profit_gain)
+                if update_flag == True: # update trailing factor each 3 hour
+                    if dt%6 == 0:
+                        trailing_factor += trailing_acc
+                        if trailing_factor > trailing_max:
+                            trailing_factor = trailing_max
+                        predict.print_and_write('Trailing factor updated %.2f' % (
+                        trailing_factor))  # if max profit not updated in this hour forcely update the trailing factor
 
+                    if dt%3 == 0: # update atr factor each 1.5 hour
+                        trailing_atr += trailing_atr_acc
+                        if trailing_atr > trailing_atr_max:
+                            trailing_atr = trailing_atr_max
+                        predict.print_and_write('Atr factor updated %.2f' % (
+                        trailing_atr))  # if max profit not updated in this hour forcely update the trailing factor
+                    profit_gain = max_profit * trailing_factor
+                    atr_gain = atr * trailing_atr
+                    trail_take_profit = math.floor(inital_lc_line + profit_gain + atr_gain)
+                    trail_take_profit_force = math.floor(inital_lc_line_force + profit_gain + atr_gain)
                 else:
                     update_flag = True
 
