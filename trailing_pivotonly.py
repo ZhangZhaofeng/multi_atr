@@ -87,6 +87,8 @@ class Trailing(tradebf_basic.Trade_basic):
         #trail_loss_cut = -self.loss_cut_rate * self.enter_price # init loss cut price usually 2.2 atr
         #trail_loss_cut =
 
+        add_factor_inprofit = 0.2
+        add_factor_outprofit = 1
         trail_take_profit = -2.2 * atr
         inital_lc_line = trail_take_profit
         trail_take_profit_force = -4.4 * atr
@@ -100,6 +102,7 @@ class Trailing(tradebf_basic.Trade_basic):
         flag = True
         init_position = self.position_pivot
         dt = 0
+        dt_not_gain = 0
         update_flag = True # update trailing acc
         #trailing_factor = 0.2
         trailing_factor = self.init_trailing_factor
@@ -138,8 +141,8 @@ class Trailing(tradebf_basic.Trade_basic):
             if profit > max_profit:
                 # if max profit reached: update trailing factor ever hour
                 if update_flag:
-                    trailing_factor += trailing_acc
-                    trailing_atr += trailing_atr_acc
+                    trailing_factor += (trailing_acc * add_factor_inprofit)
+                    trailing_atr += (trailing_atr_acc * add_factor_inprofit)
                     if trailing_factor > trailing_max:
                         trailing_factor = trailing_max
                     if trailing_atr > trailing_atr_max:
@@ -179,14 +182,15 @@ class Trailing(tradebf_basic.Trade_basic):
                 ds = 0
                 dt += 1
                 if update_flag == True: # update trailing factor each 3 hour
-                    if dt%6 == 0:
+                    dt_not_gain += 1
+                    if dt_not_gain%2 == 0:
                         trailing_factor += trailing_acc
                         if trailing_factor > trailing_max:
                             trailing_factor = trailing_max
                         predict.print_and_write('Trailing factor updated %.2f' % (
                         trailing_factor))  # if max profit not updated in this hour forcely update the trailing factor
 
-                    if dt%3 == 0: # update atr factor each 1.5 hour
+                    if dt_not_gain%3 == 0: # update atr factor each 1.5 hour
                         trailing_atr += trailing_atr_acc
                         if trailing_atr > trailing_atr_max:
                             trailing_atr = trailing_atr_max
