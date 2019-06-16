@@ -87,7 +87,7 @@ class Trailing(tradebf_basic.Trade_basic):
         #trail_loss_cut = -self.loss_cut_rate * self.enter_price # init loss cut price usually 2.2 atr
         #trail_loss_cut =
 
-        add_factor_inprofit = -0.2
+        add_factor_inprofit = -0.1
         add_factor_outprofit = 1
         trail_take_profit = -2.2 * atr
         inital_lc_line = trail_take_profit
@@ -141,7 +141,7 @@ class Trailing(tradebf_basic.Trade_basic):
             if profit > max_profit:
                 # if max profit reached: update trailing factor ever hour
                 if update_flag:
-                    trailing_factor += (trailing_acc * add_factor_inprofit)
+                    trailing_factor += trailing_acc
                     trailing_atr += (trailing_atr_acc * add_factor_inprofit)
                     if trailing_factor > trailing_max:
                         trailing_factor = trailing_max
