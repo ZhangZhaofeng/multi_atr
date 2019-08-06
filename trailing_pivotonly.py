@@ -69,7 +69,7 @@ class Trailing(tradebf_basic.Trade_basic):
                 atr = self.get_ATR()
                 retstr = self.trailing_loss_cut(cur_time, atr)
                 print(retstr)
-            time.sleep(0.8)
+            time.sleep(2)
             #except Exception:
             #    time.sleep(2)
 
@@ -87,8 +87,8 @@ class Trailing(tradebf_basic.Trade_basic):
         #trail_loss_cut = -self.loss_cut_rate * self.enter_price # init loss cut price usually 2.2 atr
         #trail_loss_cut =
 
-        add_factor_inprofit = -0.1
-        add_factor_outprofit = 1
+        add_factor_inprofit_atr = -0.2
+        add_factor_inprofit = 0.7
         trail_take_profit = -2.2 * atr
         inital_lc_line = trail_take_profit
         trail_take_profit_force = -4.4 * atr
@@ -108,11 +108,13 @@ class Trailing(tradebf_basic.Trade_basic):
         trailing_factor = self.init_trailing_factor
         trailing_atr = self.init_trailing_atr
           # add acc ever hour
-        if atr > 10000:
-            trailing_max = 1.0 + math.floor((atr - 10000)/1000) * 0.1  # acc max to this
-            trailing_acc = 0.1 + math.floor((atr - 10000)/1000) * 0.02
-            trailing_atr_max = 0.7 + math.floor((atr - 10000)/1000) * 0.1
-            trailing_atr_acc = 0.1 + math.floor((atr - 10000)/1000) * 0.02
+        atr_theathold = 16000
+        if atr > atr_theathold:
+            atr_theathold_step = 1600
+            trailing_max = 1.0 + math.floor((atr - atr_theathold)/atr_theathold_step) * 0.1  # acc max to this
+            trailing_acc = 0.1 + math.floor((atr - atr_theathold)/atr_theathold_step) * 0.02
+            trailing_atr_max = 0.7 + math.floor((atr - atr_theathold)/atr_theathold_step) * 0.1
+            trailing_atr_acc = 0.1 + math.floor((atr - atr_theathold)/atr_theathold_step) * 0.02
         else:
             trailing_max = 1.0
             trailing_acc = 0.1
@@ -141,8 +143,8 @@ class Trailing(tradebf_basic.Trade_basic):
             if profit > max_profit:
                 # if max profit reached: update trailing factor ever hour
                 if update_flag:
-                    trailing_factor += trailing_acc
-                    trailing_atr += (trailing_atr_acc * add_factor_inprofit)
+                    trailing_factor += (trailing_acc * add_factor_inprofit)
+                    trailing_atr += (trailing_atr_acc * add_factor_inprofit_atr)
                     if trailing_factor > trailing_max:
                         trailing_factor = trailing_max
                     if trailing_atr > trailing_atr_max:
@@ -181,7 +183,7 @@ class Trailing(tradebf_basic.Trade_basic):
                 startt = tdelta
                 ds = 0
                 dt += 1
-                if update_flag == True: # update trailing factor each 3 hour
+                if update_flag == True: # update trailing factor each hour
                     dt_not_gain += 1
                     if dt_not_gain%2 == 0:
                         trailing_factor += trailing_acc
@@ -205,7 +207,7 @@ class Trailing(tradebf_basic.Trade_basic):
 
             #loss cut
             if profit < trail_take_profit or profit > trail_max_profit or loss_cut_count_start:
-                if loss_cut_count <= 300: # protect the price not break too soon
+                if loss_cut_count <= 200: # protect the price not break too soon
                     loss_cut_count_start = True
 
                 if self.position_pivot > 0.0 and (loss_cut_count > 300 or profit < trail_take_profit_force):
