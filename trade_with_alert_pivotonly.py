@@ -102,7 +102,7 @@ class Alert_trading(tradebf_basic.Trade_basic):
                 time.sleep(1)
             except Exception:
                 print(Exception)
-                time.sleep(0.5)
+                time.sleep(1)
                 continue
 
 if __name__ == '__main__':
