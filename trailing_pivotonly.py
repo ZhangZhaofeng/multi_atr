@@ -69,7 +69,7 @@ class Trailing(tradebf_basic.Trade_basic):
                 atr = self.get_ATR()
                 retstr = self.trailing_loss_cut(cur_time, atr)
                 print(retstr)
-            time.sleep(2)
+            time.sleep(1)
             #except Exception:
             #    time.sleep(2)
 
@@ -237,7 +237,7 @@ class Trailing(tradebf_basic.Trade_basic):
             self.get_vals()
             if loss_cut_count_start:
                 loss_cut_count += 1
-            time.sleep(0.8)
+            time.sleep(2)
 
         return ('Quit pivot by other way')
 
