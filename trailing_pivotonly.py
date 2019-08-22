@@ -88,7 +88,7 @@ class Trailing(tradebf_basic.Trade_basic):
         #trail_loss_cut =
 
         add_factor_inprofit_atr = -0.2
-        add_factor_inprofit = 0.7
+        add_factor_inprofit = 0.35
         trail_take_profit = -2.2 * atr
         inital_lc_line = trail_take_profit
         trail_take_profit_force = -4.4 * atr
